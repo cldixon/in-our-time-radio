@@ -1,3 +1,4 @@
+import time
 import random
 from enum import StrEnum
 
@@ -75,25 +76,48 @@ def collect_all_programme_urls(
         format_listing_url(page_num) for page_num in available_page_numbers
     ]
 
-    all_programme_urls = crawl_pooler(
-        collect_listed_programme_urls_from_single_page,
-        programme_listing_urls,
-        sleep_time=1,
-        processes=4
-    )
+    all_programme_urls = []
+
+    for listing_url in programme_listing_urls:
+        try:
+            programme_urls = collect_listed_programme_urls_from_single_page(listing_url)
+            all_programme_urls.extend(programme_urls)
+            time.sleep(0.5)
+        except Exception as e:
+            print(f"| ** ERROR ** | url: {listing_url}")
+            print(f"| --> {e}\n")
+
+    #all_programme_urls = crawl_pooler(
+    #    collect_listed_programme_urls_from_single_page,
+    #    programme_listing_urls,
+    #    sleep_time=1,
+    #    processes=4
+    #)
 
     # flatten nested list of programme urls
-    return [i for sublist in all_programme_urls for i in sublist]
+    #return [i for sublist in all_programme_urls for i in sublist]
+    return all_programme_urls
 
 
-def collect_all_programme_data(programme_urls: list[str] | None = None) -> list[dict]:
+def collect_all_programme_data(programme_urls: list[str] | None = None, use_pooler: bool = False) -> list[dict]:
     if programme_urls is None:
         programme_urls = collect_all_programme_urls()
 
-    all_programm_data = crawl_pooler(
-        crawl_func=get_programme_data_from_url,
-        target_urls=programme_urls,
-        sleep_time=1,
-        processes=4
-    )
-    return all_programm_data
+    all_programme_data = []
+
+    for programme_url in programme_urls:
+        try:
+            programme_data = get_programme_data_from_url(programme_url)
+            all_programme_data.append(programme_data)
+            time.sleep(0.5)
+        except Exception as e:
+            print(f"| ** ERROR ** | url: {programme_url}")
+            print(f"| --> {e}\n")
+
+    #all_programm_data = crawl_pooler(
+    #    crawl_func=get_programme_data_from_url,
+    #    target_urls=programme_urls,
+    #    sleep_time=1,
+    #    processes=4
+    #)
+    return all_programme_data

@@ -17,14 +17,13 @@ def get_title(programme_html: BeautifulSoup) -> str:
     )
 
 def get_duration(programme_html: BeautifulSoup) -> int:
-    duration_as_seq = (
+    """Show duration. Can be desribed in minutes (e.g., '43 minutes') or in hours (e.g., '1 hour')."""
+    duration = (
         programme_html
         .find("div", {"class": "map__intro"})
-        .get_text(strip=True, separator=" ")
     )
-    if duration_as_seq is not None:
-        duration_as_str = re.search(r"(\d{1,3}) minutes$", duration_as_seq).group(1)
-        return int(duration_as_str)
+    if duration is not None:
+        return duration.find_all("p")[1].get_text(strip=True)
     else:
         raise ValueError(f"Unable to extract duration...")
 
@@ -126,7 +125,7 @@ def extract_programme_data_from_html(programme_html: BeautifulSoup) -> dict:
     # FIXME: create typed dictionary over std dict
     return {
         "title": get_title(programme_html),
-        "duration_in_minutes": get_duration(programme_html),
+        "duration": get_duration(programme_html),
         "short_description": get_short_description(programme_html),
         "long_description": get_long_description(programme_html),
         "audio_url": get_download_url(programme_html),

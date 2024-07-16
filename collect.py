@@ -22,7 +22,7 @@ def main():
 
     ## -- STAGE 1: COLLECT ALL PROGRAMME URLS FROM ARCHIVE----
     print(f"\n## -- COLLECTING PROGRAMME URLS FROM LISTINGS ----\n{'-' * 35}")
-    programme_urls = archive.collect_all_programme_urls()
+    programme_urls = archive.collect_all_programme_urls(max_page=2)
     print('-' * 35, '\n')
 
     ## -- STAGE 2.0: SCRAPE PROGRAMME CONTENT ----
