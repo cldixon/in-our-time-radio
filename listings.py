@@ -1,11 +1,24 @@
+import os
 import time
 import random
+import argparse
 from enum import StrEnum
 
+import polars as pl
 from bs4 import BeautifulSoup
-from utils import get_html, crawl_pooler
 
-from programme import get_programme_data_from_url
+from utils import get_soup_from_url, crawl_pooler
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument("--test", action='store_true', help="Flag for testing of script. Will only crawl small number of listing pages.")
+
+
+args = parser.parse_args()
+
+# data directory
+DATA_DIR = "data"
+PROGRAMME_URLS_CSV = os.path.join(DATA_DIR, "programme_urls.csv")
 
 # templated path for programme episode listings
 PROGRAMME_LISTING_URL_TEMPLATE = (
@@ -19,12 +32,11 @@ def format_listing_url(page_num: int, url_template: str = PROGRAMME_LISTING_URL_
     return url_template.format(page_num=page_num)
 
 
-#### -- HELPER FUNCTIONS TO IDENTIFY THE MAXIMUM AVAILABLE PAGES ----
+#### - MAXIMUM AVAILABLE PAGE ----
 
 class MaxAvailablePageTag(StrEnum):
     TAG_TYPE = "li"
     CLASS_NAME = "pagination__page--last"
-
 
 def _get_max_available_page_number_from_html(soup: BeautifulSoup) -> int:
     max_available_page = soup.find(MaxAvailablePageTag.TAG_TYPE, MaxAvailablePageTag.CLASS_NAME)
@@ -39,12 +51,11 @@ def _get_max_available_page_number_from_html(soup: BeautifulSoup) -> int:
         raise ValueError(f"Extracted '{max_page_num}', but this value could not be converted to an integer.")
 
 
-
 #### -- STRIP INDIVIDUAL PROGRAMME EPISODE LINKS FROM LISTING PAGE ----
 #### -- EXAMPLE: https://www.bbc.co.uk/programmes/b006qykl/episodes/player?page=6
 
 def collect_listed_programme_urls_from_single_page(url: str) -> list[str]:
-    html_content = get_html(url)
+    html_content = get_soup_from_url(url)
     programmes_listing = html_content.find_all("div", {"class": "programme"})
     programme_urls = [
         programme.find("h2", {"class": "programme__titles"}).find("a").get("href")
@@ -52,72 +63,55 @@ def collect_listed_programme_urls_from_single_page(url: str) -> list[str]:
     ]
     return programme_urls
 
-
 #### -- MAIN FUNCTIONS FOR CRAWLING ARCHIVE ----
 
 def get_max_archive_page_number() -> int:
     random_page_num = random.randint(10, 85)
     archive_listing = format_listing_url(page_num=random_page_num)
-    html_content = get_html(archive_listing)
+    html_content = get_soup_from_url(archive_listing)
     return _get_max_available_page_number_from_html(html_content)
 
 
 
-def collect_all_programme_urls(
-    max_page: int | None = None,
-    min_page: int = 1,
-    url_template: str = PROGRAMME_LISTING_URL_TEMPLATE
-) -> list[str]:
-    if max_page is None:
-        max_page = get_max_archive_page_number()
-    available_page_numbers = list(range(min_page, (max_page + 1)))
+def main():
+
+    # get maximum number of pages available
+    max_page = get_max_archive_page_number()
+
+    if args.test:
+        print(f"-> ---- [TEST MODE] ----")
+    print(f"-> collecting programme urls for {max_page} available pages")
+
+
+    available_page_numbers = list(range(0, (max_page + 1)))
     random.shuffle(available_page_numbers) # <- randomly shuffle order of pages
-    programme_listing_urls = [
-        format_listing_url(page_num) for page_num in available_page_numbers
-    ]
 
     all_programme_urls = []
 
-    for listing_url in programme_listing_urls:
+    if args.test:
+        available_page_numbers = available_page_numbers[:5]
+    for page_num in available_page_numbers:
+
+        listing_url = format_listing_url(page_num)
         try:
             programme_urls = collect_listed_programme_urls_from_single_page(listing_url)
-            all_programme_urls.extend(programme_urls)
-            time.sleep(0.5)
+
+            all_programme_urls.extend([
+                {"listing_url": listing_url, "programme_url": programme_url}
+                for programme_url in programme_urls
+            ])
         except Exception as e:
-            print(f"| ** ERROR ** | url: {listing_url}")
-            print(f"| --> {e}\n")
+            print(f"!! error collecting url {listing_url}")
+            print(e)
 
-    #all_programme_urls = crawl_pooler(
-    #    collect_listed_programme_urls_from_single_page,
-    #    programme_listing_urls,
-    #    sleep_time=1,
-    #    processes=4
-    #)
+        time.sleep(0.5)
 
-    # flatten nested list of programme urls
-    #return [i for sublist in all_programme_urls for i in sublist]
-    return all_programme_urls
+    # write all programme urls to csv file
+    all_programme_urls = pl.DataFrame(all_programme_urls, schema=["listing_url", "programme_url"])
+    all_programme_urls.write_csv(PROGRAMME_URLS_CSV)
+    print(f"-> Collected {len(all_programme_urls):,} individual programme urls. Saved to '{PROGRAMME_URLS_CSV}'.")
+    return
 
 
-def collect_all_programme_data(programme_urls: list[str] | None = None, use_pooler: bool = False) -> list[dict]:
-    if programme_urls is None:
-        programme_urls = collect_all_programme_urls()
-
-    all_programme_data = []
-
-    for programme_url in programme_urls:
-        try:
-            programme_data = get_programme_data_from_url(programme_url)
-            all_programme_data.append(programme_data)
-            time.sleep(0.5)
-        except Exception as e:
-            print(f"| ** ERROR ** | url: {programme_url}")
-            print(f"| --> {e}\n")
-
-    #all_programm_data = crawl_pooler(
-    #    crawl_func=get_programme_data_from_url,
-    #    target_urls=programme_urls,
-    #    sleep_time=1,
-    #    processes=4
-    #)
-    return all_programme_data
+if __name__ == '__main__':
+    main()

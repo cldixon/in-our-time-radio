@@ -3,8 +3,6 @@ from typing import TypedDict
 
 from bs4 import BeautifulSoup
 
-from utils import get_html
-
 
 ## -- PROGRAMME PAGE PARSING ----
 
@@ -121,7 +119,7 @@ def get_related_links(programme_html: BeautifulSoup) -> list[dict] | None:
     return
 
 
-def extract_programme_data_from_html(programme_html: BeautifulSoup) -> dict:
+def parse_programme_html_soup(programme_html: BeautifulSoup) -> dict:
     # FIXME: create typed dictionary over std dict
     return {
         "title": get_title(programme_html),
@@ -136,6 +134,7 @@ def extract_programme_data_from_html(programme_html: BeautifulSoup) -> dict:
         "related_links": get_related_links(programme_html)
     }
 
+'''
 def get_programme_data_from_url(url: str) -> dict:
     programme_html = get_html(url)
     return {
@@ -143,3 +142,4 @@ def get_programme_data_from_url(url: str) -> dict:
         "html": str(programme_html),
         **extract_programme_data_from_html(programme_html)
     }
+'''

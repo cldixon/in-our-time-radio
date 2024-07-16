@@ -1,4 +1,5 @@
 import time
+from pathlib import Path
 from typing import Any, Callable
 from functools import partial
 from datetime import datetime
@@ -11,11 +12,29 @@ DEFAULT_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36'
 }
 
-
-def get_html(url: str) -> BeautifulSoup:
+def get_html_from_url(url: str) -> str:
     resp = requests.get(url, headers=DEFAULT_HEADERS)
-    soup = BeautifulSoup(resp.content, features="lxml")
+    return resp.content.decode("utf-8")
+
+
+def get_soup_from_url(url: str) -> BeautifulSoup:
+    raw_html = get_html_from_url(url)
+    soup = BeautifulSoup(raw_html, features="lxml")
     return soup
+
+def get_soup_from_file(filepath: Path | str) -> BeautifulSoup:
+    with open(filepath, mode="r") as infile:
+        html_content = infile.read()
+        infile.close()
+    return BeautifulSoup(html_content, features="lxml")
+
+def save_html_to_file(html: str, filepath: Path | str) -> None:
+    with open(filepath, mode="w") as outfile:
+        outfile.write(html)
+        outfile.close()
+    return
+
+
 
 
 def crawl_func_with_sleep_time(url: str, func: Callable, sleep_time: int):
