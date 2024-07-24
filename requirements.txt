@@ -3,3 +3,4 @@ ipython
 lxml
 polars
 requests
+tqdm

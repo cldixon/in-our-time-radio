@@ -5,6 +5,7 @@ from pathlib import Path
 
 import requests
 import polars as pl
+from tqdm import tqdm
 
 from utils import DEFAULT_HEADERS
 
@@ -43,7 +44,7 @@ def main():
         .to_series().to_list()
     )
     audio_file_urls = [audio_url for audio_url in audio_file_urls if audio_url is not None]
-    print(f"-> Downloading {len(programme_data):,} mp3 files.")
+    print(f"-> Downloading {len(audio_file_urls):,} mp3 files.")
 
     if args.test:
         print(f"-> [TEST MODE] ----")
@@ -52,7 +53,7 @@ def main():
         audio_file_urls = audio_file_urls[:5]
 
     error_counter = 0
-    for audio_url in audio_file_urls:
+    for audio_url in tqdm(audio_file_urls):
         try:
             download_mp3_from_url(audio_url, dirpath=PROGRAMME_MP3_DIR)
             time.sleep(0.5)
