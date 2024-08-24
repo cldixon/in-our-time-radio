@@ -21,5 +21,5 @@ with ProgressHook() as hook:
     )
 
 # dump the diarization output to disk using RTTM format
-with open("audio.rttm", "w") as rttm:
+with open("data/test_sample.rttm", "w") as rttm:
     diarization.write_rttm(rttm)
